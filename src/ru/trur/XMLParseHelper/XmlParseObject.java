@@ -1,9 +1,7 @@
 package ru.trur.XMLParseHelper;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.xml.sax.Attributes;
 
@@ -14,8 +12,6 @@ import android.sax.StartElementListener;
 
 public class XmlParseObject 
 {
-	final public static String ELEMENT_CONTENT = "ELEMENT_CONTENT";
-	
 	protected boolean mParseAttributes = false;
 	protected boolean mParseContent = false;
 	
@@ -23,19 +19,18 @@ public class XmlParseObject
 	protected String mXpath = "";
 	protected String[] mXpathComponents;
 	
-	protected List<Map<String, String>> mElementsAttributes;
-	protected List<Map<String, String>> mElementsContent;
+	protected List<XmlObject> mItems;
 	
 	public XmlParseObject(String inMapName, String XPath) 
 	{
 		this.mInMapName = inMapName;
 		this.mXpath = XPath;
-		this.mXpathComponents = mXpath.split("#//#");	
-		
+		this.mXpathComponents = mXpath.split("//");	
+		this.mItems = new ArrayList<XmlObject>();
 	}
 	public String getName() { return mInMapName; }
-	public void setParseAttributes() { mParseAttributes = true; this.mElementsAttributes = new ArrayList<Map<String,String>>(); }
-	public void setParseContent() { mParseContent = true; this.mElementsContent = new ArrayList<Map<String,String>>(); }
+	public void setParseAttributes() { mParseAttributes = true;  }
+	public void setParseContent() { mParseContent = true; }
 	
 	protected Element findElementWithXPath(Element parent, int nextComponentNum) 
 	{
@@ -47,58 +42,52 @@ public class XmlParseObject
 		return findElementWithXPath(parent.getChild(nextComponentName), nextComponentNum);
 	}
 	
-	protected void pushNewAttributeSet(Map<String, String> attrSet) 
+	protected void pushItemToPosition(XmlObject item, int position) 
 	{
-		Map<String, String> attributeSet = new HashMap<String, String>(attrSet);
-		this.mElementsAttributes.add(attributeSet);
+		if (mItems.size() == position) 
+		{
+			mItems.add(item.copy());
+		}
+		else 
+		{
+			mItems.get(position).copy(item);
+		}
 	}
-	protected void pushNewContent(String content) 
-	{
-		Map<String, String> contentMap = new HashMap<String, String>();
-		contentMap.put(ELEMENT_CONTENT, content);
-		this.mElementsContent.add(contentMap);
-	}
+
 	
 	public void configurateListenersForRoot(RootElement xmlRoot) throws Exception
 	{
-		if (this.mParseAttributes && this.mParseContent) 
-		{
-			throw new Exception("Only one kind of parsing can be done with XmlParseObject");
-		}
-		final Map<String, String> currentElementAttributes = new HashMap<String, String>();
+		final XmlObject currentElement = new XmlObject();
 		Element thisElement = findElementWithXPath(xmlRoot, 0);
 		if (this.mParseAttributes) {
 			thisElement.setStartElementListener(new StartElementListener() {
+				int currentElementNum = 0;
 				@Override
 				public void start(Attributes attributes) {
-					currentElementAttributes.clear();
+					currentElement.clear();
 					int len = attributes.getLength();
 					for (int i = 0; i < len; i++) 
 					{
-						currentElementAttributes.put(attributes.getLocalName(i), attributes.getValue(i));
+						currentElement.getAttributes().put(attributes.getLocalName(i), attributes.getValue(i));
 					}
-					pushNewAttributeSet(currentElementAttributes);
+					pushItemToPosition(currentElement, currentElementNum++);
 				}
 			});
 		}
-		else if (this.mParseContent) {
+		if (this.mParseContent) {
 			thisElement.setEndTextElementListener(new EndTextElementListener() {
+				int currentElementNum = 0;
 				@Override
 				public void end(String body) {
-					pushNewContent(body);
+					currentElement.setContent(body);
+					pushItemToPosition(currentElement, currentElementNum++);
 				}
 			});
 		}
 	}
 	
-	public List<Map<String, String>> getResults() 
+	public List<XmlObject> getResults() 
 	{
-		if (this.mParseAttributes) {
-			return this.mElementsAttributes;
-		}
-		else if (this.mParseContent) {
-			return this.mElementsContent;
-		}
-		return null;
+		return this.mItems;
 	}
 }

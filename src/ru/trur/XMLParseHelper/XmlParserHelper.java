@@ -35,7 +35,19 @@ public class XmlParserHelper
 		currentObject.setParseAttributes();
 		mParseList.add(currentObject);
 	}
-	public Map<String, List<?>> parse() throws Exception 
+	public void createContentObject(String objectName, String XPath) 
+	{
+		XmlParseObject currentObject = new XmlParseObject(objectName, XPath);
+		currentObject.setParseContent();
+		mParseList.add(currentObject);
+	}
+	public XmlParseObject createObject(String objectName, String XPath) 
+	{
+		XmlParseObject currentObject = new XmlParseObject(objectName, XPath);
+		mParseList.add(currentObject);
+		return currentObject;
+	}
+	public Map<String, List<XmlObject>> parse() throws Exception 
 	{
 		if (mRootName.equals("")) 
 		{
@@ -52,7 +64,7 @@ public class XmlParserHelper
         	e.printStackTrace();
             throw new RuntimeException(e);
         }
-		Map<String, List<?>> result = new HashMap<String, List<?>>();
+		Map<String, List<XmlObject>> result = new HashMap<String, List<XmlObject>>();
 		for (XmlParseObject parselable : mParseList) 
 		{
 			result.put(parselable.getName(), parselable.getResults());
